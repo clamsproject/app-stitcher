@@ -1,66 +1,59 @@
-# TO_DEVS: BURN AFTER READING
-
-Delete this section of the document once the app development is done, before publishing the repository. 
-
----
-This skeleton code is a scaffolding for Python-based CLAMS app development. Specifically, it contains 
-
-1. `app.py` and `metadata.py` to write the app 
-1. `requirements.txt` to specify python dependencies
-1. `Containerfile` to containerize the app and specify system dependencies
-1. `.gitignore` and `.dockerignore` files listing commonly ignored files
-1. an empty `LICENSE` file to replace with an actual license information of the app
-1. This `README.md` file for additional information not specified in the general user manual at https://apps.clams.ai/clamsapp
-1. A number of GitHub Actions workflows for issue/bug-report management 
-1. A GHA workflow to publish app images upon any push of a git tag
-   * **NOTE**: All GHA workflows included are designed to only work in repositories under `clamsproject` organization.
-
-Before pushing your first commit, please make sure to delete this section of the document.
-
-Then use the following section to document any additional information specific to this app. If your app works significantly different from what's described in the generic readme file, be as specific as possible. 
-
-
-> **warning** 
-> TO_DEVS: Delete these `TO_DEVS` notes and warnings before publishing the repository.
-
----
-
 # Stitcher
 
-> **warning** 
-> TO_DEVS: Again, delete these `TO_DEVS` notes and warnings before publishing the repository.
+Standalone Stitcher that can be used on the output of the SWT app as long as it was run using the useStitcher parameter set to False (this is needed for two reasons: one is to make sure all TimePoints are availabel and the other is that this prototpye is somewhat simplistic in how it selects its input view).
 
-## Description
+To run the stitcher you first edit `stitcher/config.py`, in particular, the label_mapping needs to be updated to reflect the kind of mappings that you want to use.
 
-> **note**
-> TO_DEVS: A brief description of the app, expected behavior, underlying software/library/technology, etc.
+Use a fairly recent Python version and install the requirements:
 
-## User instruction
+```bash
+$ pip install -r requirements.txt
+```
 
-General user instructions for CLAMS apps is available at [CLAMS Apps documentation](https://apps.clams.ai/clamsapp).
+To start the server just type `python app.py` and to process a MMIF file do
 
-Below is a list of additional information specific to this app.
+```bash
+$ curl -X POST -d@data/example-mmif.json "http://localhost:5000?pretty=1"
+```
 
-> **note** 
-> TO_DEVS: Below is a list of additional information specific to this app.
+You can use the example file even if you do not have the video file since the code does not require access to the source data.
+
+The output will have TimeFrames, just like the SWT app:
+
+```json
+{
+    "@type": "http://mmif.clams.ai/vocabulary/TimeFrame/v2",
+    "properties": {
+      "label": "slate",
+      "classification": {"slate": 0.9825162668334894},
+      "targets": ["tp_31", "tp_32", "tp_33", "tp_34", "tp_35", "tp_36", 
+                  "tp_37", "tp_38", "tp_39", "tp_40", "tp_41"],
+      "representatives": ["tp_39"],
+      "id": "tf_2"
+}
+```  
+
+All TimePoints included in the TimeFrame are also in the output, for example:
+
+```json
+{
+    "@type": "http://mmif.clams.ai/vocabulary/TimePoint/v1",
+    "properties": {
+        "timePoint": 30000,
+        "label": "slate",
+        "classification": {
+            "bars": 1.720956788631156e-05,
+            "slate": 0.9821906582050133,
+            "chyron": 0.00016418585801147856,
+            "credits": 8.137159056786913e-06 },
+        "targets": ["v_0:tp_31"],
+        "id": "tp_31"
+}
+```
+
+The targets property contains the TimePoint from the SWT view, which will have a classification with all the pre-bin labels.
 
 
-### System requirements
+### CLAMS Note
 
-> **note**
-> TO_DEVS: Any system-level software required to run this app. Usually include some of the following:
-> * supported OS and CPU architectures
-> * usage of GPU
-> * system package names (e.g. `ffmpeg`, `libav`, `libopencv-dev`, etc.)
-> * some example code snippet to install them on Debian/Ubuntu (because our base images are based on Debian)
->     * e.g. `apt-get update && apt-get install -y <package-name>`
-
-### Configurable runtime parameter
-
-For the full list of parameters, please refer to the app metadata from [CLAMS App Directory](https://apps.clams.ai) or [`metadata.py`](metadata.py) file in this repository.
-
-> **warning**
-> TO_DEVS: If you're not developing this app for publishing on the CLAMS App Directory, the above paragraph is not applicable. Feel free to delete or change it.
-
-> **note**
-> TO_DEVS: all runtime parameters are supported to be VERY METICULOUSLY documented in the app's `metadata.py` file. However for some reason, if you need to use this space to elaborate what's already documented in `metadata.py`, feel free to do so.
+At the moment this app is not intended to ever be released as an official CLAMS App due to worries on whether it can ever be framed as a truly independent app. In particular, the app relies on a rather complex category mapping that with the current implementation of CLAMS cannot be nicely handled.
