@@ -1,7 +1,5 @@
 # Stitcher
 
-<span style="color:red">This prototype is awaiting a new version of clams-python. As you can see in the requirements file, the version specified is 1.1.2, but that one was recently retracted.</span>
-
 Standalone Stitcher that can be used on the output of the SWT app as long as it was run using the useStitcher parameter set to False (this is needed for two reasons: one is to make sure all TimePoints are availabel and the other is that this prototpye is somewhat simplistic in how it selects its input view).
 
 To run the stitcher you first edit `stitcher/config.py`, in particular, the label_mapping needs to be updated to reflect the kind of mappings that you want to use.

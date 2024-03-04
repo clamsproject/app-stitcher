@@ -1,5 +1,5 @@
 # Use the same base image version as the clams-python python library version
-FROM ghcr.io/clamsproject/clams-python:1.1.2
+FROM ghcr.io/clamsproject/clams-python:1.1.3
 
 ################################################################################
 # DO NOT EDIT THIS SECTION
