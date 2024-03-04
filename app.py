@@ -21,21 +21,14 @@ class StitcherApp(ClamsApp):
         super().__init__()
 
     def _appmetadata(self):
-        # see https://sdk.clams.ai/autodoc/clams.app.html#clams.app.ClamsApp._load_appmetadata
-        # Also check out ``metadata.py`` in this directory. 
-        # When using the ``metadata.py`` leave this do-nothing "pass" method here. 
+        # do not remove this method
         pass
 
     def _annotate(self, mmif: Union[str, dict, Mmif], **parameters) -> Mmif:
 
         stitcher = Stitcher(**parameters)
-        print('>>>', stitcher)
         predictions = create_predictions(mmif)
-        print(f'>>> found {len(predictions)} predictions, printing first five')
-        for i in range(5):
-            print(f'    {predictions[i]}')
         timeframes = stitcher.create_timeframes(predictions)
-        print(f'>>> found {len(timeframes)} timeframes')
 
         vds = mmif.get_documents_by_type(DocumentTypes.VideoDocument)
         vd = vds[0]
@@ -48,9 +41,11 @@ class StitcherApp(ClamsApp):
         new_view.new_contain(
             AnnotationTypes.TimePoint,
             document=vd.id, timeUnit='milliseconds', labelset=labelset)
-
-        # TODO: if no timeframes are added the view metadata will also not have any data
-        # in the contains property, don't know whether if this is intentional.
+        
+        # NOTE. If no timeframes are added the view metadata will also not have any data
+        # in the contains property. This is because CLAMSApp.annotate() serializes using
+        # sanitize=True and Mmif.sanitize() removes annotations types from the metadata
+        # if none were found.
 
         for tf in timeframes:
             timeframe_annotation = new_view.new_annotation(AnnotationTypes.TimeFrame)
@@ -58,11 +53,13 @@ class StitcherApp(ClamsApp):
             timeframe_annotation.add_property('classification', {tf.label: tf.score})
             timepoint_annotations = []
             for prediction in tf.targets:
-                timepoint_annotation = new_view.new_annotation(AnnotationTypes.TimePoint)
-                timepoint_annotation.add_property('timePoint', prediction.timepoint)
-                timepoint_annotation.add_property('label', prediction.label)
-                timepoint_annotation.add_property('classification', prediction.classification)
-                timepoint_annotations.append(timepoint_annotation)
+                target = f'{prediction.view_id}:{prediction.id}'
+                tp_annotation = new_view.new_annotation(AnnotationTypes.TimePoint)
+                tp_annotation.add_property('timePoint', prediction.timepoint)
+                tp_annotation.add_property('label', prediction.label)
+                tp_annotation.add_property('classification', prediction.classification)
+                tp_annotation.add_property('targets', [target])
+                timepoint_annotations.append(tp_annotation)
             timeframe_annotation.add_property(
                 'targets', [tp.id for tp in timepoint_annotations])
             reps = [p.annotation.id for p in tf.representative_predictions()]
@@ -72,6 +69,7 @@ class StitcherApp(ClamsApp):
 
 
 def create_predictions(mmif: Mmif):
+    """Creates predictions from the TimePoints."""
     predictions = []
     selected_view = None
     for view in mmif.views:
@@ -80,16 +78,15 @@ def create_predictions(mmif: Mmif):
     if selected_view is not None:
         for annotation in selected_view.annotations:
             if '/TimePoint/' in str((annotation.at_type)):
-                prediction = Prediction(annotation)
+                prediction = Prediction(annotation, selected_view.id)
                 predictions.append(prediction)
     return predictions
 
 
 def view_includes(view: View, annotation_type: str):
+    """Returns True if the annotation type is included in the view's metadata."""
     for atype in view.metadata.contains.keys():
-        # TODO: using the index to get the short name is fragile
-        # is there a SDK method that can be used?
-        if annotation_type == Path(str(atype)).parts[-2]:
+        if annotation_type in Path(str(atype)).parts:
             return True
     return False
 

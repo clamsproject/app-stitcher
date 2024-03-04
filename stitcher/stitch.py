@@ -62,12 +62,6 @@ class Stitcher:
         """Find sequences of frames for all labels where the score of each frame
         is at least the mininum value as defined in self.min_frame_score. Also
         make sure that the sequence contains at least two still frames."""
-        #labels = self.postbin_labels if self.use_postbinning else self.prebin_labels
-        #if self.use_postbinning:
-        #    postbins = self.model_config['bins']['post']
-        #if self.debug:
-        #    print('>>> labels', labels)
-        # let's first figure this out without any postbinning
         if self.label_mapping:
             for prediction in predictions:
                 prediction.create_bins(self.label_mapping)
@@ -75,8 +69,6 @@ class Stitcher:
         timeframes = []
         open_frames = { label: TimeFrame(label, self) for label in labels}
         for prediction in predictions:
-            #if self.debug:
-            #    print(prediction)
             for label in prediction.classification:
                 score = prediction.score_for_label(label)
                 if score < self.min_frame_score:
@@ -128,6 +120,7 @@ class Prediction:
     """Convenience object that wraps a MMIF Annotation and makes the information
     needed for stitching readily available.
 
+    view_id         -  the identifier of the view that the Annotation is from
     timepoint       -  the location of the frame in the video, in milliseconds
     label           -  highest scoring label for the annotation
     score           -  score of the label
@@ -136,17 +129,19 @@ class Prediction:
 
     """
 
-    def __init__(self, annotation: Annotation):
+    def __init__(self, annotation: Annotation, view_id: str):
         self.annotation = annotation
         self.id = annotation.id
+        self.view_id = view_id
         self.timepoint = annotation.get_property('timePoint')
         self.label = annotation.get_property('label')
         self.classification = annotation.get_property('classification')
         self.score = self.classification.get(self.label)
 
     def __str__(self):
-        return (f'<Prediction id={self.id} timepoint={self.timepoint}'
-                + ' label={self.label} score={self.score:.2f}>')
+        return (f'<Prediction view={self.view_id} id={self.id}'
+                + f' timepoint={self.timepoint}'
+                + f' label={self.label} score={self.score:.2f}>')
 
     def labels(self):
         return list(self.classification.keys())
